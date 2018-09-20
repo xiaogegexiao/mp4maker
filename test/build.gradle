@@ -1,10 +1,7 @@
 apply plugin: 'com.android.application'
-
-repositories {
-    maven {
-        url 'https://dl.bintray.com/xiao007/mp4maker'
-    }
-}
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-kapt'
+apply plugin: 'kotlin-android-extensions'
 
 android {
     compileSdkVersion rootProject.ext.compileSdkVersion
@@ -31,9 +28,8 @@ android {
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile 'com.android.support:appcompat-v7:25.1.0'
-//    compile project(':library')
-    compile 'com.mp4maker.mp4maker:mp4-maker:1.1.0'
-    testCompile 'junit:junit:4.12'
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation 'com.android.support:appcompat-v7:27.1.1'
+    implementation project(':library')
+    testImplementation 'junit:junit:4.12'
 }

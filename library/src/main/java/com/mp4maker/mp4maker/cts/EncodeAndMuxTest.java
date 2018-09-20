@@ -30,7 +30,6 @@ import android.opengl.GLES20;
 import android.os.Build;
 import android.os.Environment;
 import android.support.annotation.RequiresApi;
-import android.test.AndroidTestCase;
 import android.util.Log;
 import android.view.Surface;
 
@@ -52,7 +51,7 @@ import java.nio.ByteBuffer;
  * currently part of CTS.)
  */
 @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
-public class EncodeAndMuxTest extends AndroidTestCase {
+public class EncodeAndMuxTest {
     private static final String TAG = "EncodeAndMuxTest";
     private static final boolean VERBOSE = false;           // lots of logging
 
@@ -88,7 +87,6 @@ public class EncodeAndMuxTest extends AndroidTestCase {
 
     // allocate one of these up front so we don't need to do it every time
     private MediaCodec.BufferInfo mBufferInfo;
-
 
     /**
      * Tests encoding of AVC video from a Surface.  The output is saved as an MP4 file.
