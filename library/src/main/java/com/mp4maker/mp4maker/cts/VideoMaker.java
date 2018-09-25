@@ -16,13 +16,12 @@ import android.support.v8.renderscript.RenderScript;
 import android.support.v8.renderscript.Type;
 import android.util.Log;
 
-import com.xiaogegexiao.mp4maker.ScriptC_RGBToYUV;
 import com.mp4maker.mp4maker.R;
 import com.mp4maker.mp4maker.Utils.BitmapUtils;
 import com.mp4maker.mp4maker.Utils.FileUtils;
 import com.mp4maker.mp4maker.Utils.LogUtils;
-import com.squareup.picasso.NetworkPolicy;
 import com.squareup.picasso.Picasso;
+import com.xiaogegexiao.mp4maker.ScriptC_RGBToYUV;
 
 import java.io.File;
 import java.io.IOException;

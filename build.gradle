@@ -9,7 +9,7 @@ buildscript {
         google()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.1.4'
+        classpath 'com.android.tools.build:gradle:3.2.0'
         classpath 'com.google.gms:google-services:4.0.1'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
         classpath "org.jetbrains.kotlin:kotlin-allopen:$kotlinVersion"
@@ -22,7 +22,7 @@ ext {
     versionName = "1.0"
 
     compileSdkVersion = 28
-    buildToolsVersion = '27.0.3'
+    buildToolsVersion = '28.0.2'
     targetSdkVersion = 28
 }
 

@@ -4,7 +4,6 @@ import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.support.annotation.RequiresApi;
@@ -12,26 +11,17 @@ import android.support.v4.content.ContextCompat;
 import android.util.Log;
 
 import com.mp4maker.mp4maker.cts.VideoMaker;
-import com.mp4maker.mp4maker.injectmodules.DaggerModule;
-import com.squareup.picasso.Callback;
 import com.squareup.picasso.Picasso;
-import com.squareup.picasso.Target;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
-import javax.inject.Inject;
-
-import dagger.ObjectGraph;
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.ObservableSource;
 import io.reactivex.disposables.Disposable;
-import io.reactivex.functions.Action;
 import io.reactivex.functions.BiConsumer;
 import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
@@ -46,44 +36,37 @@ public class Mp4Maker {
     private static final String TAG = Mp4Maker.class.getSimpleName();
 
     private Context mContext;
-    private static Mp4Maker mInstance;
     private final LoadListener loadListener;
     private final String videoName;
+    private final int width;
+    private final int height;
+    private final int frameRate;
     private final Mp4MakeListener makeListener;
-    private final List<String> imageUrls;
-    private final ObjectGraph mp4MakerGraph;
+    private final VideoMaker mVideoMaker;
+    private final List<Uri> imageUrls;
+    private final Picasso mPicasso;
 
-    @Inject
-    Picasso mPicasso;
-
-    @Inject
-    ImageDownloader mImageDownloader;
-
-    @Inject
-    VideoMaker mVideoMaker;
-
-    Mp4Maker(Context mContext, String videoName, LoadListener loadListener, Mp4MakeListener makeListener, List<String> imageUrls) {
+    Mp4Maker(Context context, String videoName, int width, int height, int frameRate, LoadListener loadListener, Mp4MakeListener makeListener, List<Uri> imageUrls) {
         this.makeListener = makeListener;
         this.imageUrls = imageUrls;
         this.videoName = videoName;
+        this.width = width;
+        this.height = height;
+        this.frameRate = frameRate;
         this.loadListener = loadListener;
-        this.mContext = mContext;
-        mp4MakerGraph = ObjectGraph.create(getModules().toArray());
-        mp4MakerGraph.inject(this);
-    }
-
-    public static Mp4Maker getInstance(Context context) {
-        if (mInstance == null) {
-            mInstance = new Mp4Maker.Builder(context).build();
-        }
-        return mInstance;
+        this.mContext = context;
+        this.mPicasso = PicassoInstance.getInstance(context).getPicasso();
+        this.mVideoMaker = new VideoMaker(context, mPicasso);
     }
 
     public static class Builder {
         private final Context context;
+        private int width = -1;
+        private int height = -1;
+        private int frameRate = -1;
         private Mp4Maker.LoadListener loadListener;
         private Mp4Maker.Mp4MakeListener mp4MakeListener;
-        private List<String> imageUrls;
+        private List<Uri> imageUrls;
         private String videoName;
 
         /**
@@ -96,7 +79,18 @@ public class Mp4Maker {
             this.context = context.getApplicationContext();
         }
 
-        public Builder imageUrls(List<String> imageUrls) {
+        public Builder size(int width, int height) {
+            this.width = width;
+            this.height = height;
+            return this;
+        }
+
+        public Builder frameRate(int frameRate) {
+            this.frameRate = frameRate;
+            return this;
+        }
+
+        public Builder imageUrls(List<Uri> imageUrls) {
             this.imageUrls = imageUrls;
             return this;
         }
@@ -116,8 +110,14 @@ public class Mp4Maker {
             return this;
         }
 
-        public Mp4Maker build() {
-            return new Mp4Maker(context, videoName, loadListener, mp4MakeListener, imageUrls);
+        public Mp4Maker build() throws Exception{
+            if (width <= 0 || height <= 0) {
+                throw new IllegalArgumentException("invalid video width and height value (" + width + ", " + height + "). You need to call size to set the width and height");
+            }
+            if (frameRate <= 0) {
+                throw new IllegalArgumentException("invalid video frameRate value (" + frameRate + "). You need to call frameRate to set the frame rate");
+            }
+            return new Mp4Maker(context, videoName, width, height, frameRate, loadListener, mp4MakeListener, imageUrls);
         }
     }
 
@@ -146,18 +146,18 @@ public class Mp4Maker {
         }
         Disposable disposable = Observable.fromIterable(imageUrls)
                 .subscribeOn(Schedulers.io())
-                .flatMap(new Function<String, ObservableSource<Bitmap>>() {
+                .flatMap(new Function<Uri, ObservableSource<Bitmap>>() {
                     @Override
-                    public ObservableSource<Bitmap> apply(final String s) throws Exception {
+                    public ObservableSource<Bitmap> apply(final Uri sUri) throws Exception {
                         return Observable.create(new ObservableOnSubscribe<Bitmap>() {
                             @Override
                             public void subscribe(final ObservableEmitter<Bitmap> emitter) throws Exception {
                                 try {
-                                    Bitmap bm = mPicasso.load(new File(s)).get();
+                                    Bitmap bm = mPicasso.load(sUri).resize(width, height).get();
                                     emitter.onNext(bm);
                                     emitter.onComplete();
                                 } catch (Exception e) {
-                                    Log.e(TAG, "failed to decode bitmap " + s);
+                                    Log.e(TAG, "failed to decode bitmap " + sUri, e);
                                     emitter.onComplete();
                                 }
                             }
@@ -174,7 +174,7 @@ public class Mp4Maker {
                     @Override
                     public void accept(List<Bitmap> bitmaps) throws Exception {
                         try {
-                            mVideoMaker.encodeDecodeVideoFromSnapshotListToBuffer(480, 800, 1, bitmaps, videoName, new VideoMaker.VideoMakingListener() {
+                            mVideoMaker.encodeDecodeVideoFromSnapshotListToBuffer(width, height, frameRate, bitmaps, videoName, new VideoMaker.VideoMakingListener() {
 
                                 @Override
                                 public void onVideoProcessing(int maxSnapshotNum, int currentSnapshotNum) {
@@ -200,93 +200,5 @@ public class Mp4Maker {
                         throwable.printStackTrace();
                     }
                 });
-
-//        final int[] downloadedSnashotNum = new int[1];
-//        Observable.fromIterable(imageUrls).flatMap(new Function<String, Observable<Boolean>>() {
-//            @Override
-//            public Observable<Boolean> apply(final String imageUrl) {
-//                return Observable.create(new ObservableOnSubscribe<Boolean>() {
-//                    @Override
-//                    public void subscribe(ObservableEmitter<Boolean> emitter) throws Exception {
-//                        boolean isCached = mImageDownloader.isCached(imageUrl);
-//                        if (isCached) {
-//                            emitter.onNext(true);
-//                            emitter.onComplete();
-//                        } else {
-//                            try {
-//                                mPicasso.load(imageUrl).get();
-//                                emitter.onNext(true);
-//                            } catch (IOException e) {
-//                                emitter.onNext(false);
-//                            }
-//                            emitter.onComplete();
-//                        }
-//                    }
-//                }).subscribeOn(Schedulers.io());
-//            }
-//        }).map(new Function<Boolean, Boolean>() {
-//            @Override
-//            public Boolean apply(Boolean aBoolean) {
-//                downloadedSnashotNum[0]++;
-//                if (loadListener != null) {
-//                    if (downloadedSnashotNum[0] == 1) {
-//                        loadListener.onLoadStart();
-//                    } else if (downloadedSnashotNum[0] == imageUrls.size() - 1) {
-//                        loadListener.onLoadEnd();
-//                    } else {
-//                        loadListener.onLoadAmount(downloadedSnashotNum[0]);
-//                    }
-//                }
-//                return aBoolean;
-//            }
-//        }).toList().toObservable().map(new Function<List<Boolean>, List<Boolean>>() {
-//            @Override
-//            public List<Boolean> apply(List<Boolean> booleanList) {
-//                try {
-//                    mVideoMaker.encodeDecodeVideoFromSnapshotListToBuffer(imageUrls, booleanList, videoName, new VideoMaker.VideoMakingListener() {
-//
-//                        @Override
-//                        public void onVideoProcessing(int maxSnapshotNum, int currentSnapshotNum) {
-//                            if (makeListener != null) {
-//                                makeListener.onProcessedAmount(currentSnapshotNum);
-//                            }
-//                        }
-//
-//                        @Override
-//                        public void onVideoCreated(String videoPath) {
-//                            if (makeListener != null) {
-//                                makeListener.onMakeEnd(videoPath);
-//                            }
-//                        }
-//                    });
-//                } catch (Exception e) {
-//                    e.printStackTrace();
-//                }
-//                return booleanList;
-//            }
-//        }).subscribe(new Consumer<List<Boolean>>() {
-//            @Override
-//            public void accept(List<Boolean> booleen) throws Exception {
-//
-//            }
-//        }, new Consumer<Throwable>() {
-//            @Override
-//            public void accept(Throwable throwable) throws Exception {
-//
-//            }
-//        }, new Action() {
-//            @Override
-//            public void run() throws Exception {
-//
-//            }
-//        });
-    }
-
-    /**
-     * A list of modules to use for the application graph. Subclasses can override this method to
-     * provide additional modules provided they call {@code super.getModules()}.
-     */
-    protected List<Object> getModules() {
-        return Arrays.<Object>asList(new DaggerModule(mContext));
     }
 }

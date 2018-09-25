@@ -30,37 +30,6 @@ for a in soup.find_all("div",{"class":"rg_meta"}):
 
 print("there are total" , len(ActualImages),"images")
 
-if not os.path.exists(DIR):
-            os.mkdir(DIR)
-DIR = os.path.join(DIR, query.split()[0])
-
-if not os.path.exists(DIR):
-            os.mkdir(DIR)
-
 ###print images
 for i , (img , Type) in enumerate( ActualImages):
-    try:
-        if len(Type)==0:
-            f = os.path.join(DIR , image_type + "_"+ str(i)+".jpg")
-        else:
-            f = os.path.join(DIR , image_type + "_"+ str(i)+"."+Type)
-        urllib.request.urlretrieve(img, f)
-        # req = urllib.request.Request(img, headers={'User-Agent' : header})
-        # print('image', img, ' type', Type)
-
-        # raw_img = urllib.request.urlopen(req).read()
-        # print('bbb')
-
-        # cntr = len([i for i in os.listdir(DIR) if image_type in i]) + 1
-        # print(cntr)
-        # if len(Type)==0:
-        #     f = open(os.path.join(DIR , image_type + "_"+ str(cntr)+".jpg"), 'wb')
-        # else :
-        #     f = open(os.path.join(DIR , image_type + "_"+ str(cntr)+"."+Type), 'wb')
-
-
-        # f.write(raw_img)
-        # f.close()
-    except Exception as e:
-        print("could not load : "+img)
-        print(e)
+    print('image:', i, ' link:', img)

@@ -2,6 +2,7 @@ package com.mp4maker.test;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -28,24 +29,41 @@ public class MainActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        List<String> imageUrls = new ArrayList<>();
+        List<Uri> imageUrls = new ArrayList<>();
         File testImages = new File("/sdcard/test-images");
         String[] imageNames = testImages.list();
         if (imageNames != null) {
             for (String imageName : imageNames) {
-                imageUrls.add(testImages.getAbsolutePath() + File.separator + imageName);
+                imageUrls.add(Uri.fromFile(new File(testImages.getAbsolutePath() + File.separator + imageName)));
             }
         }
 
-        mMp4Maker = new Mp4Maker
-                .Builder(getApplicationContext())
-                .loadListener(this)
-                .makeListener(this)
-                .imageUrls(imageUrls)
-                .name("test")
-                .build();
+        String[] netImages = new String[]{
+                "https://www.easonmusicstore.com/webshaper/pcm/gallery/lg/8618935b6031c4f2ca613b60eea0c9881439613914-lg.jpg",
+                "https://www.easonmusicstore.com/webshaper/pcm/gallery/lg/818a8cfab8416a57ad015301ba88bee01439613967-lg.jpg",
+                "https://www.easonmusicstore.com/webshaper/pcm/gallery/lg/ab0aa6e47747200c7e44b3d1fadc72911430037070-lg.jpg",
+                "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Classical_Pianist_Di_Xiao_11.jpg/1200px-Classical_Pianist_Di_Xiao_11.jpg",
+                "https://ae01.alicdn.com/kf/HTB1aTIsLVXXXXaGXFXXq6xXFXXXU/Professional-Purple-Bamboo-Flute-Xiao-Instrument-Chinese-Shakuhachi-China-classic-traditional-music-instrument.jpg",
+                "https://www.redmusicshop.com/image/cache/data/musical_instrument/xiao/xiao_short_p_1_2-700x500.jpg"
+        };
+        for (String netImage : netImages) {
+            imageUrls.add(Uri.parse(netImage));
+        }
 
-        mMp4Maker.start();
+        try {
+            mMp4Maker = new Mp4Maker
+                    .Builder(getApplicationContext())
+                    .size(360, 480)
+                    .frameRate(5)
+                    .loadListener(this)
+                    .makeListener(this)
+                    .imageUrls(imageUrls)
+                    .name("test")
+                    .build();
+            mMp4Maker.start();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
