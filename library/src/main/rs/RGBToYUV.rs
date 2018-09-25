@@ -1,5 +1,5 @@
 #pragma version(1)
-#pragma rs java_package_name(com.cammy.cammy)
+#pragma rs java_package_name(com.xiaogegexiao.mp4maker)
 #include "rs_graphics.rsh"
 #include "rs_debug.rsh"
 

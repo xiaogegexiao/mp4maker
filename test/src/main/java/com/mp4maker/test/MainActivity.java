@@ -11,7 +11,9 @@ import android.widget.Toast;
 import com.mp4maker.mp4maker.Mp4Maker;
 import com.mp4maker.mp4maker.Utils.LogUtils;
 
+import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity
@@ -27,8 +29,13 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         List<String> imageUrls = new ArrayList<>();
-        imageUrls.add("https://cammyau.blob.core.windows.net/2017-03-06/d16c35be6c3526220c9eae585ca521d18c7d77e5E.jpg");
-        imageUrls.add("https://cammyau.blob.core.windows.net/2017-03-06/9cb4cc8b6e57ba251a99536e98dfa04a321f3becE.jpg");
+        File testImages = new File("/sdcard/test-images");
+        String[] imageNames = testImages.list();
+        if (imageNames != null) {
+            for (String imageName : imageNames) {
+                imageUrls.add(testImages.getAbsolutePath() + File.separator + imageName);
+            }
+        }
 
         mMp4Maker = new Mp4Maker
                 .Builder(getApplicationContext())

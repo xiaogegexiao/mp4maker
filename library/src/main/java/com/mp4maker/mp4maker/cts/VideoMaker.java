@@ -16,7 +16,7 @@ import android.support.v8.renderscript.RenderScript;
 import android.support.v8.renderscript.Type;
 import android.util.Log;
 
-import com.cammy.cammy.ScriptC_RGBToYUV;
+import com.xiaogegexiao.mp4maker.ScriptC_RGBToYUV;
 import com.mp4maker.mp4maker.R;
 import com.mp4maker.mp4maker.Utils.BitmapUtils;
 import com.mp4maker.mp4maker.Utils.FileUtils;
@@ -57,8 +57,7 @@ public class VideoMaker {
     // largest color component delta seen (i.e. actual vs. expected)
     private int mLargestColorDelta;
 
-    private List<String> mSnapshots;
-    private List<Boolean> mCachedList;
+    private List<Bitmap> mBitmapList;
     private int mSnapshotNum;
     private Context mContext;
     private Picasso mPicasso;
@@ -80,6 +79,7 @@ public class VideoMaker {
 
     public interface VideoMakingListener {
         void onVideoProcessing(int maxSnapshotNum, int currentSnapshotNum);
+
         void onVideoCreated(String videoPath);
     }
 
@@ -89,24 +89,24 @@ public class VideoMaker {
      * validity.
      */
     public void encodeDecodeVideoFromSnapshotListToBuffer(
-            List<String> snapshotUrls,
-            List<Boolean> cachedList,
+            int width,
+            int height,
+            int frameRate,
+            List<Bitmap> bitmapList,
             String videoName,
             VideoMakingListener videoMakingListener) throws Exception {
         mInterrupted = false;
-        mSnapshots = snapshotUrls;
-        mCachedList = cachedList;
+        mBitmapList = bitmapList;
         mVideoMakingListener = videoMakingListener;
-        mSnapshotNum = mSnapshots.size();
-        String firstImageUrl = mSnapshots.get(0);
-        Bitmap bitmap = mPicasso.load(firstImageUrl).get();
+        mSnapshotNum = bitmapList.size();
         setParameters(
-                bitmap.getWidth(),
-                bitmap.getHeight(),
+                width,
+                height,
                 1800000,
-                mSnapshotNum > 50 ?
-                        FRAME_RATE_FOR_OVER_50_FRAMES :
-                        FRAME_RATE_FOR_LESS_50_FRAMES);
+                frameRate <= 0 ?
+                        (mSnapshotNum > 50 ?
+                                FRAME_RATE_FOR_OVER_50_FRAMES :
+                                FRAME_RATE_FOR_LESS_50_FRAMES) : frameRate);
         encodeVideoFromBuffer(false, videoName);
     }
 
@@ -119,8 +119,8 @@ public class VideoMaker {
         }
 //        mWidth = width - width%2;
 //        mHeight = height - height%2;
-        mWidth = width + width%2;
-        mHeight = height + height%2;
+        mWidth = width + width % 2;
+        mHeight = height + height % 2;
         mBitRate = bitRate;
         mFrameRate = frameRate;
     }
@@ -241,6 +241,7 @@ public class VideoMaker {
                 return false;
         }
     }
+
     /**
      * Returns true if the specified color format is semi-planar YUV.  Throws an exception
      * if the color format is not recognized (e.g. not YUV).
@@ -324,7 +325,8 @@ public class VideoMaker {
                         encoder.queueInputBuffer(inputBufIndex, 0, 0, ptsUsec,
                                 MediaCodec.BUFFER_FLAG_END_OF_STREAM);
                         inputDone = true;
-                        if (VERBOSE) Log.d(TAG, "sent input EOS (with zero-length frame) ptsUsec:" + ptsUsec);
+                        if (VERBOSE)
+                            Log.d(TAG, "sent input EOS (with zero-length frame) ptsUsec:" + ptsUsec);
                         if (mVideoMakingListener != null) {
                             mVideoMakingListener.onVideoCreated(fileName);
                         }
@@ -332,17 +334,8 @@ public class VideoMaker {
                         if (mVideoMakingListener != null) {
                             mVideoMakingListener.onVideoProcessing(mSnapshotNum, generateIndex);
                         }
-                        String imageUrl = mSnapshots.get(generateIndex);
-                        Bitmap bm;
-                        try {
-                            bm = mPicasso.load(imageUrl).networkPolicy(NetworkPolicy.OFFLINE).get();
-                            if (bm != null) {
-                                bm = BitmapUtils.addWaterMark(bm, mContext.getResources().getDrawable(R.mipmap.ic_launcher));
-                            }
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            bm = null;
-                        }
+                        Bitmap bm = mBitmapList.get(generateIndex);
+                        bm = BitmapUtils.addWaterMark(bm, mContext.getResources().getDrawable(R.mipmap.ic_launcher));
                         if (bm != null) {
 //                            long startTime = System.nanoTime();
                             generateFrame(bm, frameData);
@@ -515,9 +508,9 @@ public class VideoMaker {
                 B = (argb[index] & 0xff00) >> 8;
 
                 // well known RGB to YUV algorithm
-                Y = ( (  66 * R + 129 * G +  25 * B + 128) >> 8) +  16;
-                V = ( ( -38 * R -  74 * G + 112 * B + 128) >> 8) + 128; // Previously U
-                U = ( ( 112 * R -  94 * G -  18 * B + 128) >> 8) + 128; // Previously V
+                Y = ((66 * R + 129 * G + 25 * B + 128) >> 8) + 16;
+                V = ((-38 * R - 74 * G + 112 * B + 128) >> 8) + 128; // Previously U
+                U = ((112 * R - 94 * G - 18 * B + 128) >> 8) + 128; // Previously V
 
                 // NV21 has a plane of Y and interleaved planes of VU each
                 // sampled by a factor of 2
