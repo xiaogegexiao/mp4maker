@@ -72,8 +72,8 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public void onLoadAmount(int amount) {
-        LogUtils.D(TAG, "load " + amount + " snapshots");
+    public void onLoadAmount(int total, int currentIndex, int amount) {
+        LogUtils.D(TAG, "load " + amount + " snapshots, total " + total);
     }
 
     @Override
@@ -82,7 +82,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public void onMakeStart() {
+    public void onProcessStart() {
         LogUtils.D(TAG, "make start");
     }
 
@@ -92,7 +92,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public void onMakeEnd(String mp4Path) {
+    public void onProcessEnd(String mp4Path) {
         LogUtils.D(TAG, "make end, file saved as " + mp4Path);
     }
 

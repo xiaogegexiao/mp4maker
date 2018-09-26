@@ -77,6 +77,8 @@ public class VideoMaker {
     }
 
     public interface VideoMakingListener {
+        void onVideoProcessingStart();
+
         void onVideoProcessing(int maxSnapshotNum, int currentSnapshotNum);
 
         void onVideoCreated(String videoPath);
@@ -116,8 +118,6 @@ public class VideoMaker {
         if ((width % 16) != 0 || (height % 16) != 0) {
             Log.w(TAG, "WARNING: width or height not multiple of 16");
         }
-//        mWidth = width - width%2;
-//        mHeight = height - height%2;
         mWidth = width + width % 2;
         mHeight = height + height % 2;
         mBitRate = bitRate;
@@ -331,6 +331,9 @@ public class VideoMaker {
                         }
                     } else {
                         if (mVideoMakingListener != null) {
+                            if (generateIndex == 0) {
+                                mVideoMakingListener.onVideoProcessingStart();
+                            }
                             mVideoMakingListener.onVideoProcessing(mSnapshotNum, generateIndex);
                         }
                         Bitmap bm = mBitmapList.get(generateIndex);

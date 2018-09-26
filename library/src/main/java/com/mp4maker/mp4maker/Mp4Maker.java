@@ -11,9 +11,9 @@ import android.support.v4.content.ContextCompat;
 import android.util.Log;
 
 import com.mp4maker.mp4maker.cts.VideoMaker;
+import com.mp4maker.mp4maker.models.VideoMakeEvent;
 import com.squareup.picasso.Picasso;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -124,24 +124,43 @@ public class Mp4Maker {
     public interface LoadListener {
         void onLoadStart();
 
-        void onLoadAmount(int amount);
+        void onLoadAmount(int total, int currentIndex, int amount);
 
         void onLoadEnd();
     }
 
     public interface Mp4MakeListener {
-        void onMakeStart();
+        void onProcessStart();
 
         void onProcessedAmount(int amount);
 
-        void onMakeEnd(String mp4Path);
+        void onProcessEnd(String mp4Path);
 
+        /**
+         * permission required for making mp4.
+         * <p>
+         *   Manifest.permission.WRITE_EXTERNAL_STORAGE will be required when trying to write mp4 file to sdcard
+         * </p>
+         * <p>
+         *   Manifest.permission.WRITE_EXTERNAL_STORAGE will be required when trying to write mp4 file to sdcard
+         * </p>
+         *
+         * @param permission
+         */
         void onPermissionRequired(String permission);
     }
 
     public void start() {
         if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             makeListener.onPermissionRequired(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            return;
+        }
+        if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            makeListener.onPermissionRequired(Manifest.permission.READ_EXTERNAL_STORAGE);
+            return;
+        }
+        if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED) {
+            makeListener.onPermissionRequired(Manifest.permission.INTERNET);
             return;
         }
         Disposable disposable = Observable.fromIterable(imageUrls)
@@ -177,6 +196,13 @@ public class Mp4Maker {
                             mVideoMaker.encodeDecodeVideoFromSnapshotListToBuffer(width, height, frameRate, bitmaps, videoName, new VideoMaker.VideoMakingListener() {
 
                                 @Override
+                                public void onVideoProcessingStart() {
+                                    if (makeListener != null) {
+                                        makeListener.onProcessStart();
+                                    }
+                                }
+
+                                @Override
                                 public void onVideoProcessing(int maxSnapshotNum, int currentSnapshotNum) {
                                     if (makeListener != null) {
                                         makeListener.onProcessedAmount(currentSnapshotNum);
@@ -186,7 +212,7 @@ public class Mp4Maker {
                                 @Override
                                 public void onVideoCreated(String videoPath) {
                                     if (makeListener != null) {
-                                        makeListener.onMakeEnd(videoPath);
+                                        makeListener.onProcessEnd(videoPath);
                                     }
                                 }
                             });
